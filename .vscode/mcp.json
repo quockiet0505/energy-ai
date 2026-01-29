@@ -1,0 +1,12 @@
+{
+    "servers": {
+        "encore-mcp": {
+            "args": [
+                "mcp",
+                "run",
+                "--app=energy-ai-ow2i"
+            ],
+            "command": "encore"
+        }
+    }
+}

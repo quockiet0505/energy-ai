@@ -1,38 +1,95 @@
-# Empty Encore TS Template
+# energy-ai
 
-## Developing locally
-
-When you have [installed Encore](https://encore.dev/docs/ts/install), you can create a new Encore application and clone this example with this command.
+### PROJECT FOLDER STRUCTURE
 
 ```bash
-encore app create my-app-name --example=ts/empty
+energy-ai-platform/
+├── data/
+│   ├── raw/
+│   ├── core/
+│   └── audit/
+│
+├── services/
+│   ├── eligibility/
+│   ├── cost/
+│   ├── ranking/
+│   └── audit_writer/
+│
+├── agent/
+│   ├── gating/
+│   ├── playbooks/
+│   ├── tools/
+│   └── examples/
+│
+├── knowledge/
+│   ├── definitions/
+│   └── explanations/
+│
+├── infra/
+│   ├── cloud_run/
+│   └── iam/
+│
+├── docs/
+│   ├── architecture.md
+│   ├── event_flow.md
+│   └── demo_script.md
+│
+├── README.md
+├── .env.example
+└── .gitignore
+
 ```
 
-## Running locally
-```bash
-encore run
-```
+### data/ — Data & Facts (BigQuery Layer)
 
-While `encore run` is running, open <http://localhost:9400/> to view Encore's [local developer dashboard](https://encore.dev/docs/ts/observability/dev-dash).
+Stores all datasets used by the system.
 
-## Deployment
+- raw/: original source JSON data uploaded as-is (no logic depends on this directly)
+- core/: normalized BigQuery tables used by backend services
+- audit/: audit and replay data for debugging and compliance
 
-Deploy your application to a staging environment in Encore's free development cloud:
+### services/ — Deterministic Business Logic (Cloud Run Tools)
 
-```bash
-git add -A .
-git commit -m 'Commit message'
-git push encore
-```
+Each folder represents an independent Cloud Run service.
 
-Then head over to the [Cloud Dashboard](https://app.encore.dev) to monitor your deployment and find your production URL.
+- eligibility/: checks whether plans, solar, or VPP options are applicable
+- cost/: performs electricity cost calculations
+- ranking/: compares and ranks available options
+- audit_writer/: stores recommendation audit logs
 
-From there you can also connect your own AWS or GCP account to use for deployment.
+### agent/ — AI Orchestration (Vertex AI Agent)
 
-Now off you go into the clouds!
+Controls conversation flow and tool usage.
 
-## Testing
+- gating/: defines required inputs before calling any service
+- playbooks/: conversation and tool-calling flows
+- tools/: tool schemas (contracts between Agent and services)
+- examples/: sample conversations for testing and demos
 
-```bash
-encore test
-```
+The agent never performs calculations or database queries directly.
+
+### knowledge/ — Explanation & Education (Vertex AI Search)
+
+Contains human-readable explanations.
+
+- definitions/: domain terminology (TOU, VPP, FiT, etc.)
+- explanations/: how calculations and decisions are explained to users
+
+Used only for explanation, never for decision-making.
+
+### infra/ — Infrastructure & Deployment
+
+Deployment and access configuration.
+
+- cloud_run/: scripts to deploy services
+- iam/: service accounts and permission documentation
+
+Not used at runtime.
+
+### docs/ — Project Documentation
+
+Human-facing documentation.
+
+- architecture.md: system architecture overview
+- event_flow.md: end-to-end request flow
+- demo_script.md: demo walkthrough for stakeholders
