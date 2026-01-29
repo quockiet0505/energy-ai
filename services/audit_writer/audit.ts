@@ -1,17 +1,14 @@
-// write_audit_record
-// replay_recommendation
-const store = new Map<string, any>();
-
-export function writeAuditRecord(
-  user_profile: any,
-  tool_outputs: any,
-  final_recommendation: any
+// Create a deterministic audit record.
+export function write_audit_record(
+  user_profile: unknown,
+  tool_outputs: unknown,
+  final_recommendation: unknown
 ) {
-  const id = "audit_" + Date.now();
-  store.set(id, { user_profile, tool_outputs, final_recommendation });
-  return { audit_id: id };
-}
-
-export function replayRecommendation(audit_id: string) {
-  return store.get(audit_id);
+  return {
+    audit_id: `AUDIT_${Date.now()}`,
+    user_profile,
+    tool_outputs,
+    final_recommendation,
+    created_at: new Date().toISOString(),
+  };
 }

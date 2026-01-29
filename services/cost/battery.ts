@@ -1,38 +1,19 @@
-// simulate_battery_impact
-// calculate_battery_roi
-// evaluate_vpp_programs
-// evaluate_vpp_constraints
-import { PricingComponents, UsageProfile } from "./types";
+import { UsageProfile, PricingComponents } from "./types";
 
-export function simulateBatteryImpact(
+// Estimate additional savings from battery usage.
+export function simulate_battery_impact(
   battery_capacity_kwh: number,
   usage: UsageProfile,
   pricing: PricingComponents
 ) {
-  const shifted = battery_capacity_kwh * 300;
-  const saving =
-    shifted *
-    ((pricing.usageRates.peakRate ?? 0) -
-      (pricing.usageRates.offPeakRate ?? 0));
+  const shifted_kwh = battery_capacity_kwh * 300;
+
+  const spread =
+    (pricing.usage_rates.peak_rate ?? 0.45) -
+    (pricing.usage_rates.offpeak_rate ?? 0.18);
 
   return {
-    annual_additional_saving: round(saving),
-    peak_shift_pct: 0.4,
+    annual_additional_saving: Math.round(shifted_kwh * spread),
+    peak_shift_pct: Math.round(usage.evening_pct * 100),
   };
-}
-
-export function calculateBatteryROI(
-  upfront_cost: number,
-  annual_saving: number,
-  vpp_income = 0
-) {
-  const total = annual_saving + vpp_income;
-  return {
-    payback_years: round(upfront_cost / total),
-    net_10yr_benefit: round(total * 10 - upfront_cost),
-  };
-}
-
-function round(n: number) {
-  return Math.round(n * 100) / 100;
 }

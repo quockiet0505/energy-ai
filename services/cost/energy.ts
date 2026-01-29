@@ -6,63 +6,59 @@
 
 import { PricingComponents, UsageProfile } from "./types";
 
-
-export function calculateEnergyCost(
+// Calculate annual electricity cost for single-rate pricing.
+export function calculate_energy_cost(
   pricing: PricingComponents,
   monthly_kwh: number
 ) {
-  const annual = monthly_kwh * 12;
-  const supply = pricing.supplyChargeDaily * 365;
-  const usage =
-    pricing.pricingModel === "SINGLE"
-      ? annual * (pricing.usageRates.singleRate ?? 0)
-      : 0;
+  const usage_cost =
+    monthly_kwh * 12 * pricing.usage_rates.single_rate!;
+
+  const supply_cost = pricing.supply_charge_daily * 365;
 
   return {
-    annual_cost: round(supply + usage),
+    annual_cost: Math.round(usage_cost + supply_cost),
     cost_breakdown: {
-      supply: round(supply),
-      usage: round(usage),
-      fees: 0,
+      usage: Math.round(usage_cost),
+      supply: Math.round(supply_cost),
     },
   };
 }
 
-export function calculateTouEnergyCost(
+// Calculate annual electricity cost for TOU pricing.
+export function calculate_tou_energy_cost(
   pricing: PricingComponents,
   usage: UsageProfile,
   monthly_kwh: number
 ) {
-  const annual = monthly_kwh * 12;
+  const annual_kwh = monthly_kwh * 12;
 
-  const peak = annual * usage.evening_pct * (pricing.usageRates.peakRate ?? 0);
-  const shoulder =
-    annual * usage.daytime_pct * (pricing.usageRates.shoulderRate ?? 0);
-  const offpeak =
-    annual * usage.overnight_pct * (pricing.usageRates.offPeakRate ?? 0);
+  const usage_cost =
+    annual_kwh *
+    (
+      usage.evening_pct * pricing.usage_rates.peak_rate! +
+      usage.daytime_pct * pricing.usage_rates.shoulder_rate! +
+      usage.overnight_pct * pricing.usage_rates.offpeak_rate!
+    );
 
-  const supply = pricing.supplyChargeDaily * 365;
+  const supply_cost = pricing.supply_charge_daily * 365;
 
   return {
-    annual_cost: round(supply + peak + shoulder + offpeak),
+    annual_cost: Math.round(usage_cost + supply_cost),
     tou_breakdown: {
-      supply: round(supply),
-      peak: round(peak),
-      shoulder: round(shoulder),
-      offpeak: round(offpeak),
+      peak_pct: usage.evening_pct,
+      shoulder_pct: usage.daytime_pct,
+      offpeak_pct: usage.overnight_pct,
     },
   };
 }
 
-export function calculateSolarExportValue(
+// Calculate revenue from exported solar energy.
+export function calculate_solar_export_value(
   exported_kwh: number,
   feed_in_tariff: number
 ) {
   return {
-    annual_export_value: round(exported_kwh * feed_in_tariff),
+    annual_export_value: Math.round(exported_kwh * feed_in_tariff),
   };
-}
-
-function round(n: number) {
-  return Math.round(n * 100) / 100;
 }

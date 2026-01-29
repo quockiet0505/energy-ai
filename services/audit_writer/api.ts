@@ -1,22 +1,18 @@
 import { api } from "encore.dev/api";
-import { writeAuditRecord, replayRecommendation } from "./audit";
+import { write_audit_record } from "./audit";
 
+// Store a reproducible recommendation record.
 export const write_audit = api(
   { method: "POST", path: "/audit/write" },
   async (input: {
-    user_profile: any;
-    tool_outputs: any;
-    final_recommendation: any;
-  }) =>
-    writeAuditRecord(
+    user_profile: unknown;
+    tool_outputs: unknown;
+    final_recommendation: unknown;
+  }) => {
+    return write_audit_record(
       input.user_profile,
       input.tool_outputs,
       input.final_recommendation
-    )
-);
-
-export const replay_audit = api(
-  { method: "POST", path: "/audit/replay" },
-  async (input: { audit_id: string }) =>
-    replayRecommendation(input.audit_id)
+    );
+  }
 );

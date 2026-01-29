@@ -1,20 +1,21 @@
-// estimate_usage_from_bill
-// build_usage_profile
 import { UsageProfile } from "./types";
+import { MOCK_AVG_RATE_BY_STATE } from "./_mock";
 
-export function estimateUsageFromBill(
+// Estimate electricity usage (kWh) from a bill amount.
+export function estimate_usage_from_bill(
   monthly_bill: number,
-  postcode: string,
-  customer_type: "RESIDENTIAL" | "BUSINESS"
+  state: string
 ) {
-  const avgRate = customer_type === "BUSINESS" ? 0.28 : 0.32;
+  const rate = MOCK_AVG_RATE_BY_STATE[state] ?? 0.30;
+
   return {
-    estimated_monthly_kwh: Math.round(monthly_bill / avgRate),
-    confidence_level: "MEDIUM" as const,
+    estimated_monthly_kwh: Math.round(monthly_bill / rate),
+    confidence_level: "MEDIUM",
   };
 }
 
-export function buildUsageProfile(
+// Build daily usage profile (day / evening / overnight).
+export function build_usage_profile(
   monthly_kwh: number,
   has_pool: boolean,
   has_ev: boolean,
@@ -22,10 +23,11 @@ export function buildUsageProfile(
 ): UsageProfile {
   let daytime = 0.35;
   let evening = 0.45;
-  let overnight = 0.2;
+  let overnight = 0.20;
 
-  if (has_ev) overnight += 0.15;
-  if (has_pool || has_ac) daytime += 0.1;
+  if (has_pool) daytime += 0.05;
+  if (has_ev) overnight += 0.10;
+  if (has_ac) evening += 0.05;
 
   const total = daytime + evening + overnight;
 

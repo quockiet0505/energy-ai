@@ -1,101 +1,83 @@
 import { api } from "encore.dev/api";
-import { rand, pick } from "../utils/random";
+import { estimate_usage_from_bill, build_usage_profile } from "./usage";
+import { extract_plan_pricing_components } from "./pricing";
 import {
-  calculateEnergyCost,
-  calculateTouEnergyCost,
-  calculateSolarExportValue,
+  calculate_energy_cost,
+  calculate_tou_energy_cost,
 } from "./energy";
-import { buildUsageProfile } from "./usage";
-import { simulateSolarImpact } from "./solar";
-import { simulateBatteryImpact } from "./battery";
-import { PricingComponents } from "./types";
+import { simulate_solar_impact } from "./solar";
+import { simulate_battery_impact } from "./battery";
 
-function randomPricing(): PricingComponents {
-  const model = pick(["SINGLE", "TOU", "WHOLESALE"] as const);
+// Simulate annual energy cost for a plan.
+export const simulate_billing = api(
+  { method: "POST", path: "/cost/simulate" },
+  async (input: {
+    monthly_bill?: number;
+    monthly_kwh?: number;
+    state: string;
+    pricing_model: "SINGLE" | "TOU";
+    has_pool?: boolean;
+    has_ev?: boolean;
+    has_ac?: boolean;
+  }) => {
+    const monthly_kwh =
+      input.monthly_kwh ??
+      estimate_usage_from_bill(input.monthly_bill!, input.state)
+        .estimated_monthly_kwh;
 
-  if (model === "SINGLE") {
-    return {
-      pricingModel: "SINGLE",
-      supplyChargeDaily: rand(0.9, 1.5),
-      usageRates: { singleRate: rand(0.25, 0.4) },
-      feedInTariff: rand(0.05, 0.1),
-      feesSummary: { hasCreditCardFee: false, hasExitFee: false },
-    };
-  }
+    const pricing = extract_plan_pricing_components(
+      input.state,
+      input.pricing_model
+    );
 
-  if (model === "TOU") {
-    return {
-      pricingModel: "TOU",
-      supplyChargeDaily: rand(0.9, 1.5),
-      usageRates: {
-        peakRate: rand(0.4, 0.6),
-        shoulderRate: rand(0.25, 0.35),
-        offPeakRate: rand(0.15, 0.25),
-      },
-      feedInTariff: rand(0.05, 0.1),
-      feesSummary: { hasCreditCardFee: false, hasExitFee: false },
-    };
-  }
+    const usage = build_usage_profile(
+      monthly_kwh,
+      !!input.has_pool,
+      !!input.has_ev,
+      !!input.has_ac
+    );
 
-  return {
-    pricingModel: "WHOLESALE",
-    supplyChargeDaily: rand(1.0, 1.6),
-    usageRates: {},
-    feedInTariff: rand(0.05, 0.1),
-    feesSummary: { hasCreditCardFee: false, hasExitFee: false },
-  };
-}
-
-export const calculate_cost = api(
-  { method: "POST", path: "/cost/calculate" },
-  async (input: { monthly_kwh: number }) => {
-    const pricing = randomPricing();
-    const usage = buildUsageProfile(input.monthly_kwh, false, false, false);
-
-    if (pricing.pricingModel === "TOU") {
-      return calculateTouEnergyCost(pricing, usage, input.monthly_kwh);
-    }
-
-    if (pricing.pricingModel === "SINGLE") {
-      return calculateEnergyCost(pricing, input.monthly_kwh);
-    }
-
-    return {
-      pricingModel: "WHOLESALE",
-      note: "WHOLESALE pricing not implemented yet",
-      pricing,
-    };
+    return input.pricing_model === "TOU"
+      ? calculate_tou_energy_cost(pricing, usage, monthly_kwh)
+      : calculate_energy_cost(pricing, monthly_kwh);
   }
 );
 
+// Simulate solar impact.
 export const simulate_solar = api(
   { method: "POST", path: "/cost/solar" },
-  async (input: { solar_size_kw: number; monthly_kwh: number }) => {
-    const pricing = randomPricing();
-    const usage = buildUsageProfile(input.monthly_kwh, false, false, false);
-
-    const solar = simulateSolarImpact(
-      input.solar_size_kw,
-      usage,
-      pricing
+  async (input: {
+    solar_size_kw: number;
+    monthly_kwh: number;
+    state: string;
+  }) => {
+    const pricing = extract_plan_pricing_components(
+      input.state,
+      "SINGLE"
     );
 
-    const exportValue = calculateSolarExportValue(
-      solar.exported_kwh,
-      pricing.feedInTariff
-    );
+    const usage = build_usage_profile(input.monthly_kwh, false, false, false);
 
-    return { ...solar, ...exportValue };
+    return simulate_solar_impact(input.solar_size_kw, usage, pricing);
   }
 );
 
+// Simulate battery impact.
 export const simulate_battery = api(
   { method: "POST", path: "/cost/battery" },
-  async (input: { battery_capacity_kwh: number; monthly_kwh: number }) => {
-    const pricing = randomPricing();
-    const usage = buildUsageProfile(input.monthly_kwh, false, false, false);
+  async (input: {
+    battery_capacity_kwh: number;
+    monthly_kwh: number;
+    state: string;
+  }) => {
+    const pricing = extract_plan_pricing_components(
+      input.state,
+      "TOU"
+    );
 
-    return simulateBatteryImpact(
+    const usage = build_usage_profile(input.monthly_kwh, false, false, false);
+
+    return simulate_battery_impact(
       input.battery_capacity_kwh,
       usage,
       pricing
